@@ -4,36 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chatbot Rental Motor</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
       font-family: 'Inter', sans-serif;
       background-color: #f3f4f6;
+      height: 100vh;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      padding: 20px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     #chatMessages {
-      max-height: 200px;
+      height: 300px;
       overflow-y: auto;
+      padding: 10px;
       scrollbar-width: thin;
       scrollbar-color: #3B82F6 #E5E7EB;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+    }
+
+    @media (max-width: 640px) {
+      #chatMessages {
+        height: 250px;
+      }
     }
 
     #chatMessages::-webkit-scrollbar {
-      width: 8px;
+      width: 6px;
     }
 
     #chatMessages::-webkit-scrollbar-track {
       background: #E5E7EB;
+      border-radius: 10px;
     }
 
     #chatMessages::-webkit-scrollbar-thumb {
       background-color: #3B82F6;
-      border-radius: 20px;
+      border-radius: 10px;
     }
 
     .message-box {
@@ -41,26 +70,27 @@
       padding: 10px;
       margin-bottom: 10px;
       max-width: 80%;
+      word-break: break-word;
+      position: relative;
+      clear: both;
     }
 
     .user-message {
       background-color: #DCF8C6;
       color: #15803D;
-      text-align: right;
-      margin-left: auto;
+      float: right;
     }
 
     .bot-message {
       background-color: #E0F2FE;
       color: #0672A7;
-      text-align: left;
-      margin-right: auto;
+      float: left;
     }
 
     .typing-indicator span {
       display: inline-block;
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background-color: #9CA3AF;
       margin: 0 2px;
@@ -71,8 +101,16 @@
     .typing-indicator span:nth-child(3) { animation-delay: 1s; }
 
     @keyframes pulse {
-      0%, 100% { opacity: 0.2; }
-      50% { opacity: 1; }
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    .quick-reply-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+      justify-content: center;
     }
 
     .quick-reply-button {
@@ -82,12 +120,20 @@
       border-radius: 16px;
       cursor: pointer;
       border: 1px solid #DBEAFE;
-      transition: background-color 0.3s ease, transform 0.2s ease;
+      transition: all 0.3s ease;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
     }
 
     .quick-reply-button:hover {
       background-color: #DBEAFE;
-      transform: scale(1.05);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .quick-reply-button:active {
+      transform: translateY(0);
     }
 
     #chatButton {
@@ -95,40 +141,194 @@
       bottom: 2rem;
       right: 2rem;
       z-index: 9999;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 50%;
+      background-color: #3B82F6;
+      color: white;
+      border: none;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 24px;
+    }
+
+    #chatButton:hover {
+      transform: scale(1.05);
+      background-color: #2563EB;
     }
 
     #chatBox {
       position: fixed;
       bottom: 6rem;
       right: 2rem;
-      width: 20rem;
+      width: 350px;
+      max-width: 90vw;
       background-color: white;
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      padding: 1rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
       display: none;
       flex-direction: column;
       z-index: 9998;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    @media (max-width: 480px) {
+      #chatBox {
+        width: 90vw;
+        bottom: 5rem;
+        right: 5%;
+        left: 5%;
+        max-height: 80vh;
+      }
     }
 
     #chatBox.open {
       display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .chat-header {
+      padding: 15px;
+      background-color: #3B82F6;
+      color: white;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top-left-radius: 0.75rem;
+      border-top-right-radius: 0.75rem;
+    }
+
+    .chat-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chat-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      background-color: #f9fafb;
+    }
+
+    .chat-footer {
+      padding: 10px 15px;
+      background-color: white;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-field {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+
+    .input-field:focus {
+      border-color: #3B82F6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .send-button {
+      background-color: #3B82F6;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 0 20px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .send-button:hover {
+      background-color: #2563EB;
+    }
+
+    .whatsapp-link {
+      display: inline-block;
+      background-color: #25D366;
+      color: white !important;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-top: 10px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .whatsapp-link:hover {
+      background-color: #128C7E;
+      transform: translateY(-2px);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .message-content {
+      line-height: 1.5;
+    }
+
+    .clearfix::after {
+      content: "";
+      clear: both;
+      display: table;
+    }
+
+    .booking-info {
+      background-color: #f0f9ff;
+      border-left: 3px solid #3B82F6;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+
+    .booking-info p {
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <!-- Main content can go here if needed -->
+  </div>
 
-  <button id="chatButton" class="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:scale-105 hover:bg-blue-600">
-    💬 Sewa Motor
+  <button id="chatButton" aria-label="Open chat">
+    💬
   </button>
 
   <div id="chatBox">
-    <div class="font-bold text-lg mb-2 text-blue-700">Rental Motor XYZ 🏍️</div>
-    <div id="chatMessages" class="flex-1 overflow-y-auto mb-4"></div>
-    <div class="flex flex-wrap gap-2 mb-2" id="quickReplies"></div>
-    <div class="flex gap-2">
-      <input id="userInput" type="text" placeholder="Ketik pesan..." class="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500">
-      <button id="sendButton" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Kirim</button>
+    <div class="chat-header">
+      <div class="chat-header-title">
+        <span>🏍️ Rental Motor XYZ</span>
+      </div>
+      <button id="closeChat" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px;">✕</button>
+    </div>
+    <div class="chat-body">
+      <div id="chatMessages" class="clearfix"></div>
+      <div class="quick-reply-container" id="quickReplies"></div>
+    </div>
+    <div class="chat-footer">
+      <div class="input-group">
+        <input id="userInput" type="text" class="input-field" placeholder="Ketik pesan..." autocomplete="off">
+        <button id="sendButton" class="send-button">Kirim</button>
+      </div>
     </div>
   </div>
 
@@ -136,6 +336,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const chatButton = document.getElementById('chatButton');
       const chatBox = document.getElementById('chatBox');
+      const closeChat = document.getElementById('closeChat');
       const chatMessages = document.getElementById('chatMessages');
       const userInput = document.getElementById('userInput');
       const sendButton = document.getElementById('sendButton');
@@ -149,11 +350,25 @@
         { type: 'Sport', price: 'Rp150.000/hari' }
       ];
 
+      // Clear floats after each message
+      function clearFloats() {
+        const clearDiv = document.createElement('div');
+        clearDiv.style.clear = 'both';
+        chatMessages.appendChild(clearDiv);
+      }
+
       function displayMessage(sender, message, isHtml = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message-box', sender === 'You' ? 'user-message' : 'bot-message');
-        messageDiv.innerHTML = isHtml ? message : `<strong>${sender}:</strong> ${message}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content');
+        contentDiv.innerHTML = isHtml ? message : `<strong>${sender}:</strong> ${message}`;
+        
+        messageDiv.appendChild(contentDiv);
         chatMessages.appendChild(messageDiv);
+        clearFloats();
+        
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
@@ -162,16 +377,22 @@
         typingDiv.classList.add('message-box', 'bot-message', 'typing-indicator');
         typingDiv.innerHTML = `<span></span><span></span><span></span>`;
         chatMessages.appendChild(typingDiv);
+        clearFloats();
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        return typingDiv;
       }
 
-      function hideTypingIndicator() {
-        const typingDiv = chatMessages.querySelector('.typing-indicator');
-        if (typingDiv) typingDiv.remove();
+      function hideTypingIndicator(indicator) {
+        if (indicator && indicator.parentNode === chatMessages) {
+          chatMessages.removeChild(indicator);
+          clearFloats();
+        }
       }
 
       function showQuickReplies(replies) {
         quickRepliesContainer.innerHTML = '';
+        if (!replies || replies.length === 0) return;
+        
         replies.forEach(reply => {
           const btn = document.createElement('button');
           btn.className = 'quick-reply-button';
@@ -185,31 +406,34 @@
       }
 
       function generateWhatsAppURL(message) {
-        const phone = '62851564578';
+        const phone = '6285156455878';
         const encodedMessage = encodeURIComponent(message);
-        const isMobile = /iPhone|Android|Mobile/i.test(navigator.userAgent);
-        const baseUrl = isMobile ? `https://wa.me/${phone}` : `https://web.whatsapp.com/send?phone=${phone}`;
-        return `${baseUrl}&text=${encodedMessage}`;
+        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        const baseUrl = isMobile
+          ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`
+          : `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+        return baseUrl;
       }
 
       function generateBotResponse(input) {
         input = input.toLowerCase();
         let response = "";
         let quickReplies = [];
-
+    
         if (input.includes('harga')) {
-          response = "🛵 Daftar Harga:<br>" + motorData.map(m => `- ${m.type}: ${m.price}`).join('<br>');
+          response = "🛵 <strong>Daftar Harga:</strong><br>" + 
+                     motorData.map(m => `- ${m.type}: ${m.price}`).join('<br>');
           quickReplies = ['Booking Matic', 'Booking Sport'];
         } else if (input.includes('booking')) {
-          response = "Silakan isi data berikut:<br>Nama:";
+          response = "Silakan isi data berikut:<br><strong>Nama:</strong>";
           conversationState.bookingStep = 1;
         } else if (conversationState.bookingStep === 1) {
           conversationState.nama = input;
-          response = "Tanggal sewa (DD-MM-YYYY):";
+          response = "<strong>Tanggal sewa</strong> (DD-MM-YYYY):";
           conversationState.bookingStep = 2;
         } else if (conversationState.bookingStep === 2) {
           conversationState.tanggal = input;
-          response = "Jenis motor (Matic/Sport):";
+          response = "<strong>Jenis motor</strong> (Matic/Sport):";
           conversationState.bookingStep = 3;
         } else if (conversationState.bookingStep === 3) {
           const jenis = input.toLowerCase();
@@ -218,7 +442,22 @@
             conversationState.jenisMotor = motor.type;
             const message = `Halo, saya ingin booking motor:\nNama: ${conversationState.nama}\nTanggal: ${conversationState.tanggal}\nJenis: ${motor.type}\nHarga: ${motor.price}`;
             const whatsappURL = generateWhatsAppURL(message);
-            response = `Booking berhasil!<br><strong>Nama:</strong> ${conversationState.nama}<br><strong>Tanggal:</strong> ${conversationState.tanggal}<br><strong>Motor:</strong> ${motor.type}<br><strong>Harga:</strong> ${motor.price}<br><a href="${whatsappURL}" target="_blank" class="text-blue-600 underline">Klik di sini untuk kirim ke WhatsApp</a>`;
+            
+            response = `
+              <div>
+                <p><strong>✅ Booking berhasil!</strong></p>
+                <div class="booking-info">
+                  <p><strong>Nama:</strong> ${conversationState.nama}</p>
+                  <p><strong>Tanggal:</strong> ${conversationState.tanggal}</p>
+                  <p><strong>Motor:</strong> ${motor.type}</p>
+                  <p><strong>Harga:</strong> ${motor.price}</p>
+                </div>
+                <a href="${whatsappURL}" target="_blank" class="whatsapp-link">
+                  Klik di sini untuk kirim ke WhatsApp
+                </a>
+              </div>
+            `;
+            
             conversationState = {};
             quickReplies = ['Lihat Harga', 'Booking Lagi'];
           } else {
@@ -226,40 +465,56 @@
             quickReplies = ['Matic', 'Sport'];
           }
         } else {
-          response = "Halo! Ketik 'harga' untuk lihat tarif atau 'booking' untuk sewa motor.";
+          response = "Halo! Selamat datang di Rental Motor XYZ. Ketik 'harga' untuk lihat tarif atau 'booking' untuk sewa motor.";
           quickReplies = ['Lihat Harga', 'Booking Motor'];
         }
 
         return { response, quickReplies };
       }
 
-      chatButton.onclick = () => {
+      function toggleChat() {
         isChatOpen = !isChatOpen;
         chatBox.classList.toggle('open', isChatOpen);
-        if (isChatOpen) {
-          chatMessages.innerHTML = '';
-          displayMessage('Bot', "Selamat datang di Rental Motor XYZ! Ada yang bisa dibantu?");
-          showQuickReplies(['Lihat Harga', 'Booking Motor']);
+        
+        if (isChatOpen && chatMessages.children.length === 0) {
+          setTimeout(() => {
+            displayMessage('Bot', "Selamat datang di Rental Motor XYZ! Ada yang bisa dibantu?");
+            showQuickReplies(['Lihat Harga', 'Booking Motor']);
+          }, 300);
         }
-      };
+      }
 
-      sendButton.onclick = () => {
+      chatButton.addEventListener('click', toggleChat);
+      closeChat.addEventListener('click', toggleChat);
+
+      sendButton.addEventListener('click', () => {
         const msg = userInput.value.trim();
         if (!msg) return;
+        
         displayMessage('You', msg);
         userInput.value = '';
-        showTypingIndicator();
+        
+        const typingIndicator = showTypingIndicator();
+        
+        // Simulate network delay for a more realistic experience
         setTimeout(() => {
-          hideTypingIndicator();
+          hideTypingIndicator(typingIndicator);
           const { response, quickReplies } = generateBotResponse(msg);
           displayMessage('Bot', response, true);
           showQuickReplies(quickReplies);
-        }, 600);
-      };
+        }, 800);
+      });
 
       userInput.addEventListener('keypress', e => {
         if (e.key === 'Enter') sendButton.click();
       });
+
+      // Check if the page loaded from a mobile device and auto-open chat
+      if (window.innerWidth <= 768) {
+        setTimeout(() => {
+          if (!isChatOpen) toggleChat();
+        }, 1000);
+      }
     });
   </script>
 </body>
