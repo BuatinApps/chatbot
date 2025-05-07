@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Rental Motor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+    }
+
+    #chatMessages {
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #3B82F6 #E5E7EB;
+    }
+
+    #chatMessages::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #chatMessages::-webkit-scrollbar-track {
+      background: #E5E7EB;
+    }
+
+    #chatMessages::-webkit-scrollbar-thumb {
+      background-color: #3B82F6;
+      border-radius: 20px;
+    }
+
+    .message-box {
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 10px;
+      max-width: 80%;
+    }
+
+    .user-message {
+      background-color: #DCF8C6;
+      color: #15803D;
+      text-align: right;
+      margin-left: auto;
+    }
+
+    .bot-message {
+      background-color: #E0F2FE;
+      color: #0672A7;
+      text-align: left;
+      margin-right: auto;
+    }
+
+    .typing-indicator span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #9CA3AF;
+      margin: 0 2px;
+      animation: pulse 1.5s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.5s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 1s; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+
+    .quick-reply-button {
+      background-color: #EFF6FF;
+      color: #0672A7;
+      padding: 8px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      border: 1px solid #DBEAFE;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .quick-reply-button:hover {
+      background-color: #DBEAFE;
+      transform: scale(1.05);
+    }
+
+    #chatButton {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 9999;
+    }
+
+    #chatBox {
+      position: fixed;
+      bottom: 6rem;
+      right: 2rem;
+      width: 20rem;
+      background-color: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      display: none;
+      flex-direction: column;
+      z-index: 9998;
+    }
+
+    #chatBox.open {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="chatButton" class="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:scale-105 hover:bg-blue-600">
+    💬 Sewa Motor
+  </button>
+
+  <div id="chatBox">
+    <div class="font-bold text-lg mb-2 text-blue-700">Rental Motor XYZ 🏍️</div>
+    <div id="chatMessages" class="flex-1 overflow-y-auto mb-4"></div>
+    <div class="flex flex-wrap gap-2 mb-2" id="quickReplies"></div>
+    <div class="flex gap-2">
+      <input id="userInput" type="text" placeholder="Ketik pesan..." class="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+      <button id="sendButton" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Kirim</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chatButton = document.getElementById('chatButton');
+      const chatBox = document.getElementById('chatBox');
+      const chatMessages = document.getElementById('chatMessages');
+      const userInput = document.getElementById('userInput');
+      const sendButton = document.getElementById('sendButton');
+      const quickRepliesContainer = document.getElementById('quickReplies');
+
+      let isChatOpen = false;
+      let conversationState = {};
+
+      const motorData = [
+        { type: 'Matic', price: 'Rp100.000/hari' },
+        { type: 'Sport', price: 'Rp150.000/hari' }
+      ];
+
+      function displayMessage(sender, message, isHtml = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message-box', sender === 'You' ? 'user-message' : 'bot-message');
+        messageDiv.innerHTML = isHtml ? message : `<strong>${sender}:</strong> ${message}`;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('message-box', 'bot-message', 'typing-indicator');
+        typingDiv.innerHTML = `<span></span><span></span><span></span>`;
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function hideTypingIndicator() {
+        const typingDiv = chatMessages.querySelector('.typing-indicator');
+        if (typingDiv) typingDiv.remove();
+      }
+
+      function showQuickReplies(replies) {
+        quickRepliesContainer.innerHTML = '';
+        replies.forEach(reply => {
+          const btn = document.createElement('button');
+          btn.className = 'quick-reply-button';
+          btn.textContent = reply;
+          btn.onclick = () => {
+            userInput.value = reply;
+            sendButton.click();
+          };
+          quickRepliesContainer.appendChild(btn);
+        });
+      }
+
+      function generateWhatsAppURL(message) {
+        const phone = '6285156455878';
+        const encodedMessage = encodeURIComponent(message);
+        const isMobile = /iPhone|Android|Mobile/i.test(navigator.userAgent);
+        const baseUrl = isMobile ? `https://wa.me/${phone}` : `https://web.whatsapp.com/send?phone=${phone}`;
+        return `${baseUrl}&text=${encodedMessage}`;
+      }
+
+      function generateBotResponse(input) {
+        input = input.toLowerCase();
+        let response = "";
+        let quickReplies = [];
+
+        if (input.includes('harga')) {
+          response = "🛵 Daftar Harga:<br>" + motorData.map(m => `- ${m.type}: ${m.price}`).join('<br>');
+          quickReplies = ['Booking Matic', 'Booking Sport'];
+        } else if (input.includes('booking')) {
+          response = "Silakan isi data berikut:<br>Nama:";
+          conversationState.bookingStep = 1;
+        } else if (conversationState.bookingStep === 1) {
+          conversationState.nama = input;
+          response = "Tanggal sewa (DD-MM-YYYY):";
+          conversationState.bookingStep = 2;
+        } else if (conversationState.bookingStep === 2) {
+          conversationState.tanggal = input;
+          response = "Jenis motor (Matic/Sport):";
+          conversationState.bookingStep = 3;
+        } else if (conversationState.bookingStep === 3) {
+          const jenis = input.toLowerCase();
+          const motor = motorData.find(m => m.type.toLowerCase() === jenis);
+          if (motor) {
+            conversationState.jenisMotor = motor.type;
+            const message = `Halo, saya ingin booking motor:\nNama: ${conversationState.nama}\nTanggal: ${conversationState.tanggal}\nJenis: ${motor.type}\nHarga: ${motor.price}`;
+            const whatsappURL = generateWhatsAppURL(message);
+            response = `Booking berhasil!<br><strong>Nama:</strong> ${conversationState.nama}<br><strong>Tanggal:</strong> ${conversationState.tanggal}<br><strong>Motor:</strong> ${motor.type}<br><strong>Harga:</strong> ${motor.price}<br><a href="${whatsappURL}" target="_blank" class="text-blue-600 underline">Klik di sini untuk kirim ke WhatsApp</a>`;
+            conversationState = {};
+            quickReplies = ['Lihat Harga', 'Booking Lagi'];
+          } else {
+            response = "Jenis motor tidak tersedia. Silakan pilih Matic atau Sport.";
+            quickReplies = ['Matic', 'Sport'];
+          }
+        } else {
+          response = "Halo! Ketik 'harga' untuk lihat tarif atau 'booking' untuk sewa motor.";
+          quickReplies = ['Lihat Harga', 'Booking Motor'];
+        }
+
+        return { response, quickReplies };
+      }
+
+      chatButton.onclick = () => {
+        isChatOpen = !isChatOpen;
+        chatBox.classList.toggle('open', isChatOpen);
+        if (isChatOpen) {
+          chatMessages.innerHTML = '';
+          displayMessage('Bot', "Selamat datang di Rental Motor XYZ! Ada yang bisa dibantu?");
+          showQuickReplies(['Lihat Harga', 'Booking Motor']);
+        }
+      };
+
+      sendButton.onclick = () => {
+        const msg = userInput.value.trim();
+        if (!msg) return;
+        displayMessage('You', msg);
+        userInput.value = '';
+        showTypingIndicator();
+        setTimeout(() => {
+          hideTypingIndicator();
+          const { response, quickReplies } = generateBotResponse(msg);
+          displayMessage('Bot', response, true);
+          showQuickReplies(quickReplies);
+        }, 600);
+      };
+
+      userInput.addEventListener('keypress', e => {
+        if (e.key === 'Enter') sendButton.click();
+      });
+    });
+  </script>
+</body>
+</html>
