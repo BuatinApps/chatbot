@@ -323,6 +323,55 @@
     .booking-info p {
       margin: 5px 0;
     }
+    
+    .error-message {
+      color: #dc2626;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    
+    .price-highlight {
+      font-weight: bold;
+      color: #9333ea;
+    }
+    
+    .duration-selector {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .duration-option {
+      padding: 6px 12px;
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .duration-option:hover {
+      background-color: #e5e7eb;
+    }
+    
+    .duration-option.selected {
+      background-color: #bfdbfe;
+      border-color: #3b82f6;
+      color: #1e40af;
+    }
+    
+    .total-price {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #9333ea;
+      font-size: 16px;
+      background-color: #faf5ff;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -343,6 +392,52 @@
         <span>🏍️ Rental Motor XYZ</span>
       </div>
       <button id="closeChat" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px;">✕</button>
+    </div>
+    
+    <!-- Animation container that appears at the top of the chat -->
+    <div id="animationContainer" style="text-align: center; padding: 10px; background-color: #f0f9ff;">
+      <div class="motorcycle-animation">
+        <svg width="100%" height="80" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg">
+          <g id="motorcycle" transform="translate(0, 50)">
+            <circle cx="30" cy="20" r="15" fill="#333" stroke="#000" stroke-width="2"/>
+            <circle cx="100" cy="20" r="15" fill="#333" stroke="#000" stroke-width="2"/>
+            <path d="M30,20 L45,0 L65,-5 L85,0 L100,20" stroke="#3B82F6" stroke-width="3" fill="none"/>
+            <path d="M45,0 L55,-15 L75,-15 L85,0" stroke="#3B82F6" stroke-width="2" fill="#E0F2FE"/>
+            <path d="M35,5 L50,-10" stroke="#000" stroke-width="1.5"/>
+            <rect x="50" y="-17" width="30" height="2" fill="#000"/>
+            <circle cx="30" cy="20" r="3" fill="#FFF"/>
+            <circle cx="100" cy="20" r="3" fill="#FFF"/>
+            <animateTransform 
+              attributeName="transform"
+              type="translate"
+              from="-50, 50"
+              to="350, 50"
+              begin="0s"
+              dur="7s"
+              repeatCount="indefinite"
+            />
+          </g>
+          <g id="road">
+            <line x1="0" y1="70" x2="300" y2="70" stroke="#666" stroke-width="2"/>
+            <line x1="10" y1="70" x2="30" y2="70" stroke="#FFF" stroke-width="2" stroke-dasharray="20,20">
+              <animate 
+                attributeName="x1" 
+                from="10" 
+                to="-10" 
+                dur="0.5s"
+                repeatCount="indefinite"
+              />
+              <animate 
+                attributeName="x2" 
+                from="30" 
+                to="10" 
+                dur="0.5s"
+                repeatCount="indefinite"
+              />
+            </line>
+          </g>
+        </svg>
+      </div>
     </div>
     <div class="chat-body">
       <div id="chatMessages" class="clearfix"></div>
@@ -370,11 +465,27 @@
       let conversationState = {};
 
       const motorData = [
-        { type: 'Matic Standar', price: 'Rp75.000/hari', desc: '(Honda Beat, Yamaha Mio)' },
-        { type: 'Matic Menengah', price: 'Rp90.000/hari', desc: '(Honda Vario, Yamaha Aerox)' },
-        { type: 'Matic Premium', price: 'Rp135.000/hari', desc: '(Yamaha NMAX, Honda PCX)' },
-        { type: 'Sport', price: 'Rp150.000/hari', desc: '(Honda CBR, Yamaha R15)' }
+        { type: 'Matic Standar', price: 75000, display: 'Rp75.000/hari', desc: '(Honda Beat, Yamaha Mio)' },
+        { type: 'Matic Menengah', price: 90000, display: 'Rp90.000/hari', desc: '(Honda Vario, Yamaha Aerox)' },
+        { type: 'Matic Premium', price: 135000, display: 'Rp135.000/hari', desc: '(Yamaha NMAX, Honda PCX)' },
+        { type: 'Sport', price: 150000, display: 'Rp150.000/hari', desc: '(Honda CBR, Yamaha R15)' }
       ];
+
+      // Function to format number as Indonesian Rupiah
+      function formatRupiah(angka) {
+        const numberString = angka.toString();
+        const split = numberString.split('.');
+        const sisa = split[0].length % 3;
+        let rupiah = split[0].substr(0, sisa);
+        const ribuan = split[0].substr(sisa).match(/\d{3}/g);
+        
+        if (ribuan) {
+          const separator = sisa ? '.' : '';
+          rupiah += separator + ribuan.join('.');
+        }
+        
+        return 'Rp' + rupiah;
+      }
 
       // Clear floats after each message
       function clearFloats() {
@@ -441,6 +552,56 @@
         return baseUrl;
       }
 
+      function createDurationSelector(motorPrice) {
+        const container = document.createElement('div');
+        container.className = 'duration-selector';
+        
+        const label = document.createElement('div');
+        label.style.width = '100%';
+        label.style.textAlign = 'center';
+        label.style.marginBottom = '8px';
+        label.innerHTML = '<strong>Pilih durasi sewa (maks. 7 hari):</strong>';
+        container.appendChild(label);
+        
+        for (let i = 1; i <= 7; i++) {
+          const option = document.createElement('div');
+          option.className = 'duration-option';
+          option.textContent = `${i} Hari`;
+          option.setAttribute('data-days', i);
+          option.onclick = function() {
+            // Remove selected class from all options
+            document.querySelectorAll('.duration-option').forEach(opt => {
+              opt.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            this.classList.add('selected');
+            
+            // Update total price
+            const days = parseInt(this.getAttribute('data-days'));
+            const total = motorPrice * days;
+            
+            // Update or create total price element
+            let totalElement = document.getElementById('totalPrice');
+            if (!totalElement) {
+              totalElement = document.createElement('div');
+              totalElement.id = 'totalPrice';
+              totalElement.className = 'total-price';
+              container.appendChild(totalElement);
+            }
+            
+            totalElement.innerHTML = `Total: <strong>${formatRupiah(total)}</strong> untuk ${days} hari`;
+            
+            // Store in conversation state
+            conversationState.days = days;
+            conversationState.totalPrice = total;
+          };
+          container.appendChild(option);
+        }
+        
+        return container;
+      }
+
       function generateBotResponse(input) {
         input = input.toLowerCase();
         let response = "";
@@ -449,10 +610,25 @@
         if (input.includes('harga')) {
           response = "🛵 <strong>Daftar Harga Motor:</strong><br>";
           
-          motorData.forEach(m => {
-            response += `<div style="margin-bottom: 10px; padding: 8px; border-bottom: 1px solid #e5e7eb;">
-              <strong>${m.type}</strong> ${m.desc}<br>
-              <span style="color: #9333ea; font-weight: 600;">${m.price}</span>
+          // Animated motorcycles for each type
+          motorData.forEach((m, index) => {
+            const svgColor = index % 2 === 0 ? "#3B82F6" : "#9333EA";
+            const bgColor = index % 2 === 0 ? "#EFF6FF" : "#F5F3FF";
+            
+            response += `<div style="margin-bottom: 15px; padding: 12px; border-radius: 8px; background-color: ${bgColor}; border-left: 3px solid ${svgColor};">
+              <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <svg width="50" height="30" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="translate(0, 40)">
+                    <circle cx="20" cy="10" r="10" fill="#333"/>
+                    <circle cx="70" cy="10" r="10" fill="#333"/>
+                    <path d="M20,10 L30,0 L50,-5 L60,0 L70,10" stroke="${svgColor}" stroke-width="3" fill="none"/>
+                    <path d="M30,0 L40,-10 L55,-10 L60,0" stroke="${svgColor}" stroke-width="2" fill="#E0F2FE"/>
+                  </g>
+                </svg>
+                <strong style="margin-left: 10px; font-size: 16px;">${m.type}</strong>
+              </div>
+              <div>${m.desc}</div>
+              <div style="color: #9333ea; font-weight: 600; margin-top: 5px;">${m.display}</div>
             </div>`;
           });
           
@@ -465,11 +641,18 @@
           response = "<strong>Tanggal sewa</strong> (DD-MM-YYYY):";
           conversationState.bookingStep = 2;
         } else if (conversationState.bookingStep === 2) {
+          // Validate date format
+          const datePattern = /^\d{2}-\d{2}-\d{4}$/;
+          if (!datePattern.test(input)) {
+            response = "Format tanggal tidak valid. Mohon masukkan tanggal dengan format DD-MM-YYYY (contoh: 15-05-2025):";
+            return { response, quickReplies: [] };
+          }
+          
           conversationState.tanggal = input;
           response = "<strong>Jenis motor</strong>:<br>";
           
           motorData.forEach(m => {
-            response += `- ${m.type} ${m.price}<br>`;
+            response += `- ${m.type} ${m.display}<br>`;
           });
           
           conversationState.bookingStep = 3;
@@ -477,38 +660,144 @@
         } else if (conversationState.bookingStep === 3) {
           const jenis = input.toLowerCase();
           const motor = motorData.find(m => m.type.toLowerCase().includes(jenis));
+          
           if (motor) {
             conversationState.jenisMotor = motor.type;
-            const message = `Halo, saya ingin booking motor:
-Nama: ${conversationState.nama}
-Tanggal: ${conversationState.tanggal}
-Jenis: ${motor.type} ${motor.desc}
-Harga: ${motor.price}`;
-            const whatsappURL = generateWhatsAppURL(message);
+            conversationState.motorPrice = motor.price;
+            conversationState.motorDisplay = motor.display;
+            conversationState.motorDesc = motor.desc;
             
-            response = `
-              <div>
-                <p><strong>✅ Booking berhasil!</strong></p>
-                <div class="booking-info">
-                  <p><strong>Nama:</strong> ${conversationState.nama}</p>
-                  <p><strong>Tanggal:</strong> ${conversationState.tanggal}</p>
-                  <p><strong>Motor:</strong> ${motor.type} ${motor.desc}</p>
-                  <p><strong>Harga:</strong> ${motor.price}</p>
-                </div>
-                <a href="${whatsappURL}" target="_blank" class="whatsapp-link">
-                  Klik di sini untuk kirim ke WhatsApp
-                </a>
-              </div>
-            `;
+            response = `<strong>Pilih durasi sewa</strong> (maksimal 7 hari):`;
+            conversationState.bookingStep = 4;
             
-            conversationState = {};
-            quickReplies = ['Lihat Harga', 'Booking Lagi'];
+            // Create quick replies for duration
+            quickReplies = ['1 Hari', '2 Hari', '3 Hari', '4 Hari', '5 Hari', '6 Hari', '7 Hari'];
+            
+            // Add custom HTML element for duration selection
+            setTimeout(() => {
+              const durationSelector = createDurationSelector(motor.price);
+              chatMessages.appendChild(durationSelector);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 500);
+            
           } else {
             response = "Jenis motor tidak tersedia. Silakan pilih dari daftar berikut:";
             motorData.forEach(m => {
               response += `<br>- ${m.type}`;
             });
             quickReplies = motorData.map(m => m.type);
+          }
+        } else if (conversationState.bookingStep === 4) {
+          // Process duration input
+          let days = 1;
+          
+          // If duration is already set from the UI
+          if (conversationState.days) {
+            days = conversationState.days;
+          } else {
+            // If user typed the duration
+            const match = input.match(/(\d+)/);
+            if (match) {
+              days = parseInt(match[0]);
+              if (days < 1) days = 1;
+              if (days > 7) days = 7;
+            }
+          }
+          
+          conversationState.days = days;
+          conversationState.totalPrice = conversationState.motorPrice * days;
+          
+          const message = `Halo, saya ingin booking motor:
+Nama: ${conversationState.nama}
+Tanggal: ${conversationState.tanggal}
+Jenis: ${conversationState.jenisMotor} ${conversationState.motorDesc}
+Durasi: ${days} hari
+Total: ${formatRupiah(conversationState.totalPrice)}`;
+
+          const whatsappURL = generateWhatsAppURL(message);
+          
+          response = `
+            <div>
+              <p><strong>✅ Booking berhasil!</strong></p>
+              
+              <div style="text-align: center; margin: 15px 0;">
+                <svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+                  <g>
+                    <!-- Motor -->
+                    <circle cx="30" cy="50" r="12" fill="#333" stroke="#000" stroke-width="2"/>
+                    <circle cx="90" cy="50" r="12" fill="#333" stroke="#000" stroke-width="2"/>
+                    <path d="M30,50 L45,35 L60,30 L75,35 L90,50" stroke="#3B82F6" stroke-width="3" fill="none"/>
+                    <path d="M45,35 L55,25 L70,25 L75,35" stroke="#3B82F6" stroke-width="2" fill="#E0F2FE"/>
+                    
+                    <!-- Pengendara -->
+                    <circle cx="60" cy="15" r="8" fill="#64748B"/>
+                    <path d="M60,23 L60,38" stroke="#64748B" stroke-width="3"/>
+                    <path d="M60,28 L50,38" stroke="#64748B" stroke-width="2"/>
+                    <path d="M60,28 L70,38" stroke="#64748B" stroke-width="2"/>
+                    <path d="M60,38 L55,55" stroke="#64748B" stroke-width="2"/>
+                    <path d="M60,38 L65,55" stroke="#64748B" stroke-width="2"/>
+                    
+                    <!-- Animasi -->
+                    <circle cx="30" cy="50" r="3" fill="#FFF">
+                      <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="90" cy="50" r="3" fill="#FFF">
+                      <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+                    </circle>
+                    
+                    <!-- Garis jalan -->
+                    <line x1="10" y1="62" x2="110" y2="62" stroke="#666" stroke-width="2"/>
+                    <line x1="10" y1="62" x2="30" y2="62" stroke="#FFF" stroke-width="2" stroke-dasharray="5,5">
+                      <animate attributeName="x1" values="10;0;10" dur="0.5s" repeatCount="indefinite"/>
+                      <animate attributeName="x2" values="30;20;30" dur="0.5s" repeatCount="indefinite"/>
+                    </line>
+                    
+                    <!-- Efek gerakan -->
+                    <g>
+                      <line x1="15" y1="30" x2="5" y2="40" stroke="#64748B" stroke-width="1"/>
+                      <line x1="5" y1="35" x2="15" y2="45" stroke="#64748B" stroke-width="1"/>
+                      <animateTransform attributeName="transform" type="translate" values="0,0; 5,0; 0,0" dur="0.5s" repeatCount="indefinite"/>
+                    </g>
+                    
+                    <g transform="translate(100, 0)">
+                      <line x1="15" y1="30" x2="5" y2="40" stroke="#64748B" stroke-width="1"/>
+                      <line x1="5" y1="35" x2="15" y2="45" stroke="#64748B" stroke-width="1"/>
+                      <animateTransform attributeName="transform" type="translate" values="0,0; -5,0; 0,0" dur="0.5s" repeatCount="indefinite"/>
+                    </g>
+                    
+                    <!-- Efek pergerakan motor keseluruhan -->
+                    <animateTransform 
+                      attributeName="transform"
+                      type="translate"
+                      values="0,1; 0,-1; 0,1"
+                      dur="0.5s"
+                      repeatCount="indefinite"
+                      additive="sum"
+                    />
+                  </g>
+                </svg>
+              </div>
+              
+              <div class="booking-info">
+                <p><strong>Nama:</strong> ${conversationState.nama}</p>
+                <p><strong>Tanggal:</strong> ${conversationState.tanggal}</p>
+                <p><strong>Motor:</strong> ${conversationState.jenisMotor} ${conversationState.motorDesc}</p>
+                <p><strong>Durasi:</strong> ${days} hari</p>
+                <p><strong>Total Biaya:</strong> ${formatRupiah(conversationState.totalPrice)}</p>
+              </div>
+              <a href="${whatsappURL}" target="_blank" class="whatsapp-link">
+                Klik di sini untuk kirim ke WhatsApp
+              </a>
+            </div>
+          `;
+          
+          conversationState = {};
+          quickReplies = ['Lihat Harga', 'Booking Lagi'];
+
+          // Remove duration selector if exists
+          const durationSelector = document.querySelector('.duration-selector');
+          if (durationSelector) {
+            durationSelector.remove();
           }
         } else {
           response = "Halo! Selamat datang di Rental Motor XYZ. Ketik 'harga' untuk lihat tarif atau 'booking' untuk sewa motor.";
