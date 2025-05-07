@@ -185,7 +185,7 @@
       }
 
       function generateWhatsAppURL(message) {
-        const phone = '6285156455878';
+        const phone = '62851564578';
         const encodedMessage = encodeURIComponent(message);
         const isMobile = /iPhone|Android|Mobile/i.test(navigator.userAgent);
         const baseUrl = isMobile ? `https://wa.me/${phone}` : `https://web.whatsapp.com/send?phone=${phone}`;
